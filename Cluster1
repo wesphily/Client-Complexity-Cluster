@@ -1,0 +1,65 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Aug 17 13:03:07 2018
+
+@author: ptillotson
+"""
+
+import pandas as pd
+import numpy as np
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+
+#### Read in CSV as dataframe ####
+esxidata = pd.read_csv('esxihosts.csv')
+hypervdata = pd.read_csv('hypervhosts.csv')
+
+#### Group by client name. Use aggregate to convert host name and guest name to unique count of each value for each client ####
+esxidata = esxidata.groupby(['Client Name']).agg({'Host Name': pd.Series.nunique, 'Guest Name': pd.Series.nunique}).reset_index()
+hypervdata = hypervdata.groupby(['Client']).agg({'Host Name': pd.Series.nunique, 'VM Name': pd.Series.nunique}).reset_index()
+
+#### Rename Columns to Match esxidata ####
+hypervdata = hypervdata.rename(columns={'Client':'Client Name', 'VM Name':'Guest Name'})
+
+#### combine both sets of data into one dataframe ####
+clientdata = esxidata.append(hypervdata)
+
+#### Remove Atrium From Datafram ####
+clientdata = clientdata[clientdata['Client Name']!='Atrium'].reset_index(drop=True)
+clientdata
+
+
+#### Create Unsurpervised Model ####
+number_of_optimal_clusters = []
+for i in range(1, 5):
+    kmeans_model = KMeans(n_clusters = i, init = 'k-means++', random_state = 0).fit(clientdata[['Host Name', 'Guest Name']])
+    number_of_optimal_clusters.append(kmeans_model.inertia_)
+
+#### Plot Optimal Cluster Number ####
+#### Challenging to see, but 3 is our elbow ####
+plt.plot(range(1, 5), number_of_optimal_clusters)
+plt.title('The Elbow Method')
+plt.xlabel('Number of Clusters')
+plt.ylabel('number_of_optimal_clusters')
+plt.show()
+
+#### New Model with right number of clusters ####
+kmeans_model2 = KMeans(n_clusters = 3, init = 'k-means++', random_state = 0).fit_predict(clientdata[['Host Name', 'Guest Name']])
+kmeans_model2_answers = pd.Series(kmeans_model2).rename('Labels')
+#### Visualize Cluster ####
+answer = clientdata.join(kmeans_model2_answers)
+
+def sa_levelhyperv(x):
+    if x == 0:
+        return 1
+    elif x == 2:
+        return 2
+    else:
+        return 3
+
+answer['SA Level'] = answer['Labels'].apply(lambda x: sa_levelhyperv(x))
+
+answer.to_csv('C:/Users/ptillotson/Documents/jmark machine learning/pythonrhatechlevel.csv')
+
+
+
