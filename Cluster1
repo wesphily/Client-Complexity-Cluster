@@ -21,43 +21,48 @@ hypervdata = hypervdata.groupby(['Client']).agg({'Host Name': pd.Series.nunique,
 #### Rename Columns to Match esxidata ####
 hypervdata = hypervdata.rename(columns={'Client':'Client Name', 'VM Name':'Guest Name'})
 
+#### Add in new clients/data ####
+newdata = pd.read_csv("newdata.csv")
+
 #### combine both sets of data into one dataframe ####
 clientdata = esxidata.append(hypervdata)
+clientdata = clientdata.append(newdata)
 
 #### Remove Atrium From Datafram ####
 clientdata = clientdata[clientdata['Client Name']!='Atrium'].reset_index(drop=True)
-clientdata
+clientdata['Host Name']=clientdata["Host Name"].mul(10)
 
 
 #### Create Unsurpervised Model ####
 number_of_optimal_clusters = []
-for i in range(1, 5):
+for i in range(1, 20):
     kmeans_model = KMeans(n_clusters = i, init = 'k-means++', random_state = 0).fit(clientdata[['Host Name', 'Guest Name']])
     number_of_optimal_clusters.append(kmeans_model.inertia_)
 
 #### Plot Optimal Cluster Number ####
 #### Challenging to see, but 3 is our elbow ####
-plt.plot(range(1, 5), number_of_optimal_clusters)
+plt.plot(range(1, 20), number_of_optimal_clusters)
 plt.title('The Elbow Method')
 plt.xlabel('Number of Clusters')
 plt.ylabel('number_of_optimal_clusters')
 plt.show()
 
 #### New Model with right number of clusters ####
-kmeans_model2 = KMeans(n_clusters = 3, init = 'k-means++', random_state = 0).fit_predict(clientdata[['Host Name', 'Guest Name']])
+kmeans_model2 = KMeans(n_clusters = 5, init = 'k-means++', random_state = 0).fit_predict(clientdata[['Host Name', 'Guest Name']])
 kmeans_model2_answers = pd.Series(kmeans_model2).rename('Labels')
 #### Visualize Cluster ####
 answer = clientdata.join(kmeans_model2_answers)
 
 def sa_levelhyperv(x):
-    if x == 0:
+    if x == 3:
         return 1
-    elif x == 2:
+    elif x == 0:
         return 2
     else:
         return 3
 
 answer['SA Level'] = answer['Labels'].apply(lambda x: sa_levelhyperv(x))
+answer["Host Name"] = answer["Host Name"].div(10)
 
 answer.to_csv('C:/Users/ptillotson/Documents/jmark machine learning/pythonrhatechlevel.csv')
 
