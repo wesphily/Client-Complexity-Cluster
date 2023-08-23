@@ -28,7 +28,7 @@ clientdata = esxidata.append(hypervdata)
 clientdata = clientdata.append(newdata)
 
 #### Remove Atrium From Datafram ####
-clientdata = clientdata[clientdata['Client Name']!='Atrium'].reset_index(drop=True)
+clientdata = clientdata[clientdata['Client Name']!='clientName'].reset_index(drop=True)
 clientdata['Host Name']=clientdata["Host Name"].mul(10)
 
 
